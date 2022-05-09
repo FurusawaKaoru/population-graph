@@ -7,5 +7,5 @@ export default defineEventHandler(async (event) => {
       'X-API-KEY': process.env.RESAS_API_KEY,
     },
   })
-  return response.data.result
+  return response.data.result.data.find((record: { label: string, data: [] }) => record.label === '総人口').data
 })
