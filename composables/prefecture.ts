@@ -7,8 +7,8 @@ export type Prefecture = {
 }
 
 type Population = {
-  year: number
-  value: number
+  prefecture: Prefecture
+  population: { year: number, value: number }[]
 }
 
 const Prefectures: InjectionKey<Ref<Prefecture[]>> = Symbol('Prefectures')
@@ -32,6 +32,7 @@ export const usePrefectures = async () => {
     },
     true
   )
+  const populations = ref<Population[]>([])
 
   // TODO: provide時にできるといい感じ
   const { data } = await useFetch('/api/prefectures')
@@ -42,11 +43,10 @@ export const usePrefectures = async () => {
     if (activePrefectures.length === 0) {
       return
     }
-    const result = await Promise.all(activePrefectures.map(async (prefecture) => {
-      return await useFetch(`/api/population?prefCode=${prefecture.code}`)
+    populations.value = await Promise.all(activePrefectures.map(async (prefecture) => {
+      const { data } = await useFetch(`/api/population?prefCode=${prefecture.code}`)
+      return { prefecture, population: data.value as { year: number, value: number }[] }
     }))
-    // TODO: 人口用の箱を用意して詰める
-    console.log(result)
   })
-  return { prefectures }
+  return { prefectures, populations }
 }
