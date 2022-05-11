@@ -1,13 +1,28 @@
 import { InjectionKey, Ref } from 'vue'
 
-type Prefecture = {
+export type Prefecture = {
   code: number
   name: string
+  active: boolean
+}
+
+type Population = {
+  year: number
+  value: number
 }
 
 const Prefectures: InjectionKey<Ref<Prefecture[]>> = Symbol('Prefectures')
 
-export const usePrefectures = () => {
+const prefecturesConverter = (data: { code: number, name: string }[]) => {
+  return data.map((record) => {
+    return {
+      ...record,
+      active: false
+    }
+  })
+}
+
+export const usePrefectures = async () => {
   const prefectures = inject(
     Prefectures,
     () => {
@@ -17,29 +32,21 @@ export const usePrefectures = () => {
     },
     true
   )
-  const add = (prefecture: Prefecture) => {
-    if (prefectures.value.find(value => value.code === prefecture.code) !== undefined) {
-      return
-    }
-    prefectures.value.push(prefecture)
-  }
-  const remove = (prefecture: Prefecture) => {
-    if (prefectures.value.findIndex(value => value.code === prefecture.code) === -1) {
-      return;
-    }
-    prefectures.value = prefectures.value.filter(value => value.code !== prefecture.code)
-  }
-  return { prefectures, add, remove }
-}
 
-export const usePrefecture = (onSelect = () => console.log('selected'), onClear = () => console.log('clear')) => {
-  const selected = ref<boolean>(false)
-  watchEffect(() => {
-    if (selected.value) {
-      onSelect()
+  // TODO: provide時にできるといい感じ
+  const { data } = await useFetch('/api/prefectures')
+  prefectures.value = prefecturesConverter(data.value)
+
+  watchEffect(async () => {
+    const activePrefectures = prefectures.value.filter((prefecture) => prefecture.active)
+    if (activePrefectures.length === 0) {
       return
     }
-    onClear()
+    const result = await Promise.all(activePrefectures.map(async (prefecture) => {
+      return await useFetch(`/api/population?prefCode=${prefecture.code}`)
+    }))
+    // TODO: 人口用の箱を用意して詰める
+    console.log(result)
   })
-  return { selected }
+  return { prefectures }
 }
